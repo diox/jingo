@@ -12,34 +12,8 @@ from django.template.base import Origin, TemplateDoesNotExist
 from django.template.loader import BaseLoader
 from django.utils.importlib import import_module
 
-try:
-    import importlib.util
-    if hasattr(importlib.util, 'find_spec'):  # Py3>=3.4
-        def has_helpers(path):
-            return importlib.util.find_spec('helpers', path) is not None
-    else:  # Py3<3.4
-        def has_helpers(path):
-            # For Python 3.3, just try to import the module. Unfortunately,
-            # this changes the contract slightly for Python 3.3: if there is an
-            # module but this raises a legitimate ImportError, jingo will act
-            # as if the module doesn't exist. The intent is that we raise
-            # legitimate ImportErrors but ignore missing modules.
-            try:
-                import_module('helpers', path)
-                return True
-            except ImportError:
-                return False
-except ImportError:
-    import imp
-
-    def has_helpers(path):
-        try:
-            imp.find_module('helpers', path)
-            return True
-        except ImportError:
-            return False
-
 import jinja2
+
 
 try:
     from django.template.engine import Engine
@@ -179,10 +153,10 @@ def load_helpers():
     from jingo import helpers  # noqa
 
     for config in apps.get_app_configs():
-        if not has_helpers(config.name):
-            continue
-
-        import_module('%s.helpers' % config.name)
+        try:
+            import_module('%s.helpers' % config.name)
+        except ImportError:
+            pass
 
 
 class Register(object):
